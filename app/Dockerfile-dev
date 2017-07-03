@@ -1,0 +1,15 @@
+FROM node:6.10-alpine
+ARG node_env=development
+
+# Create app directory
+RUN mkdir -p /opt/gramolabot
+WORKDIR /opt/gramolabot
+
+# Install app dependencies
+COPY package.json /opt/gramolabot/
+RUN npm install --$node_env && npm install nodemon && npm cache clean
+
+VOLUME ["/opt/gramolabot"]
+
+EXPOSE 8080
+CMD [ "npm", "start" ]

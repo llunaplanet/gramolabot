@@ -1,0 +1,9 @@
+version: '2'
+services:
+    localtunnel:
+        build: ./test/fixtures/localtunnel
+        command: --host http://tunnel.gramolabot.com --subdomain slack --port 8080 --local-host api
+        environment:
+            - DEBUG=localtunnel*
+volumes:
+    node_modules:

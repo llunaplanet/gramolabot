@@ -1,0 +1,64 @@
+version: '2'
+services:
+    dns:
+        image: andyshinn/dnsmasq
+        command: --address=/dev/127.0.0.1
+        ports:
+            - "53:53"
+            - "53:53/udp"
+        cap_add:
+            - NET_ADMIN
+        labels:
+            - traefik.enable=false
+    traefik:
+        image: traefik:1.3.0
+        command: --web --docker --docker.watch --docker.domain=dev --logLevel=DEBUG --entryPoints="Name:http Address::80"
+        labels:
+            - traefik.backend=traefik
+            - traefik.port=8080
+            - traefik.frontend.entryPoints=http
+            - traefik.frontend.rule=Host:traefik.dev
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /dev/null:/traefik.toml
+        ports:
+            - "80:80"
+    api:
+        build:
+            context: .
+            args:
+                node_env: development
+        command: node node_modules/nodemon/bin/nodemon src/index.js
+        labels:
+            - traefik.backend=api
+            - traefik.frontend.entryPoints=http
+            - traefik.frontend.rule=Host:api.dev
+        environment:
+            - SLACK_VERIFICATION_TOKEN=${SLACK_VERIFICATION_TOKEN}
+            - ENDPOINT_HOST_URL=${ENDPOINT_HOST_URL}
+            - AWS_DEFAULT_REGION=eu-east-1
+            - AWS_ACCESS_KEY_ID=XXXXXXXXXXXXXXXXXXX
+            - AWS_SECRET_ACCESS_KEY=XXXXXXXXXXXXXXXXXXXXXXXXXX
+            - DYNAMODB_ENDPOINT=http://dynamodb:8000
+            - TABLE_PREFIX=SlackJukebox
+        volumes:
+            - .:/opt/gramolabot
+            - node_modules:/opt/gramolabot/node_modules
+    dynamodb:
+        image: peopleperhour/dynamodb
+        labels:
+            - traefik.backend=dynamodb
+            - traefik.frontend.entryPoints=http
+            - traefik.frontend.rule=Host:dynamodb.dev
+        volumes:
+            - ./test/fixtures/dynamodb:/var/dynamodb_local
+        ports:
+            - "8000"
+    swagger:
+        image: swaggerapi/swagger-editor
+        labels:
+            - traefik.backend=swagger
+            - traefik.frontend.entryPoints=http
+            - traefik.frontend.rule=Host:swagger.dev
+volumes:
+    node_modules:
